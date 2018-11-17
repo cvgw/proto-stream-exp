@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message QueryDigest {
+    int64 HostGroup =1;
+    string Digest = 4;
+}
