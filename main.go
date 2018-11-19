@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 
 	"github.com/cvgw/proto-stream-exp/proto/proxysql"
 	"github.com/gogo/protobuf/proto"
@@ -9,6 +10,8 @@ import (
 )
 
 func main() {
+	prefixSize := 4
+
 	queryDigestHg := &proxysql.QueryDigest{
 		HostGroup: int64(99),
 	}
@@ -30,13 +33,33 @@ func main() {
 	blob := make([]byte, 0)
 	buf := bytes.NewBuffer(blob)
 
+	b := make([]byte, prefixSize)
+	binary.BigEndian.PutUint32(b, uint32(len(binDataHg)))
+
+	buf.Write(b)
 	buf.Write(binDataHg)
 	log.Info(buf.Bytes())
 
+	b = make([]byte, prefixSize)
+	binary.BigEndian.PutUint32(b, uint32(len(binDataD)))
+
+	log.Infof("prefix length %d", len(b))
+
+	buf.Write(b)
 	buf.Write(binDataD)
 	log.Info(buf.Bytes())
 
-	b := buf.Bytes()
-	message := testUnmarshal(b)
-	log.Info(message)
+	b = buf.Bytes()
+	s := b[:prefixSize]
+	b = b[prefixSize:]
+
+	size := binary.BigEndian.Uint32(s)
+
+	pBin := b[:size]
+	b = b[size:]
+
+	unmarshalDigest := &proxysql.QueryDigest{}
+
+	err = proto.Unmarshal(pBin, unmarshalDigest)
+	log.Info(unmarshalDigest)
 }
